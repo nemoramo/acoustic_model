@@ -82,7 +82,7 @@ class SpeechData(Dataset):
         features = GetFrequencyFeature3(wavsignal, fs)
         features = features.reshape(features.shape[0], features.shape[1], 1)
 
-        input_length = int(self.audio_length / 8)
+        input_length = len(features)//8+1
         label_length = len(labels)
         X[0:len(features)] = features
         y[0:len(labels)] = labels

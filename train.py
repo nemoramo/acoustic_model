@@ -90,11 +90,12 @@ if __name__ == '__main__':
     import torch.optim as optim
     torch.cuda.set_device(hvd.local_rank())
     if torch.cuda.is_available():
-        assert args.gpu_rank <= torch.cuda.device_count()
+        assert args.gpu_rank <= torch.cuda.device_count(),\
+            "Should ensure that gpu_rank <= the number of yournvidia devices"
         logger.info("%d gpu(s) detected and using %d devices." % (torch.cuda.device_count(), args.gpu_rank))
     else:
         logger.info("Using cpu will take you quite a long time, not recommended!")
-    train_data = SpeechData('data_config')
+    train_data = SpeechData('data_config', dataset=args.data_type)
     dev_data = SpeechData('data_config', type='dev', dataset=args.data_type)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_data,
                                                                     num_replicas=hvd.size(),
@@ -131,6 +132,7 @@ if __name__ == '__main__':
     for epoch in tqdm(range(args.epochs)):
         if (epoch+1) % args.dev_step == 0:
             model.eval()
+            model.cuda()
             eval_loss = 0.0
             logger.info("Starting evaluating!")
             for batch_idx, samples in enumerate(dev_loader):
@@ -151,10 +153,11 @@ if __name__ == '__main__':
                 eval_loss += loss
                 # loss.backward()
                 # optimizer.step()
-                if (batch_idx + 1) % 10 == 0:
+                if (batch_idx + 1) % 5 == 0:
                     # print(outputs)
                     logger.info("Evaluating step %d, step loss : %.5f , total_mean_loss : %.5f"
                                 % (batch_idx + 1, loss, eval_loss / (batch_idx + 1)))
+            logger.info("mean_eval_loss: %.5f" % eval_loss/len(dev_data))
         else:
             model.train()
             model.cuda()
