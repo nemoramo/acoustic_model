@@ -110,7 +110,7 @@ def GetFrequencyFeature2(wavsignal, fs):
 
 
 x=np.linspace(0, 400 - 1, 400, dtype = np.int64)
-w = 0.54 - 0.46 * np.cos(2 * np.pi * (x) / (400 - 1) ) # 汉明窗
+w = 0.54 - 0.46 * np.cos(2 * np.pi * (x) / (400 - 1) ) # 汉明窗， 加窗后数据一定对称
 
 def GetFrequencyFeature3(wavsignal, fs):
 	if(16000 != fs):

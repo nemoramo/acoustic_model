@@ -1,7 +1,10 @@
+import math
 import torch
 import torch.nn as nn
 from torchsummary import summary
+from torch.autograd import Variable
 import torch.nn.functional as F
+
 
 
 def convolution(in_channels, filter_size, bias=True):
@@ -59,6 +62,51 @@ def LSTM(in_features, out_features, bidirectional=True, num_layers=1, dropout=0.
         else:
             param.data.fill_(0)
     return rnn
+
+class Lookahead(nn.Module):
+    # Wang et al 2016 - Lookahead Convolution Layer for Unidirectional Recurrent Neural Networks
+    # input shape - sequence, batch, feature - TxNxH
+    # output shape - same as input
+
+    def __init__(self, n_features, context):
+        # should we handle batch_first=True?
+        super().__init__()
+        self.n_features = n_features
+        self.weight = nn.Parameter(torch.Tensor(n_features, context + 1))
+        assert context > 0
+        self.context = context
+        self.register_parameter('bias', None)
+        self.init_parameters()
+
+    def init_parameters(self):  # what's a better way initialiase this layer?
+        stdv = 1. / math.sqrt(self.weight.size(1))
+        self.weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, input):
+        input = input.transpose(0,1)
+        # print("input:", input.shape)
+        seq_len = input.size(0)
+        # pad the 0th dimension (T/sequence) with zeroes whose number = context
+        # Once pytorch's padding functions have settled, should move to those.
+        padding = torch.zeros(self.context, *(input.size()[1:])).type_as(input.data)
+        x = torch.cat((input, Variable(padding)), 0)
+
+        # add lookahead windows (with context+1 width) as a fourth dimension
+        # for each seq-batch-feature combination
+        x = [x[i:i + self.context + 1] for i in range(seq_len)]  # TxLxNxH - sequence, context, batch, feature
+        x = torch.stack(x)
+        x = x.permute(0, 2, 3, 1)  # TxNxHxL - sequence, batch, feature, context
+
+        x = torch.mul(x, self.weight).sum(dim=3)
+        # print("x:", x.shape)
+        x = x.transpose(0,1)
+        return x
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(' \
+               + 'n_features=' + str(self.n_features) \
+               + ', context=' + str(self.context) + ')'
+
 
 
 class AcousticModel(nn.Module):
@@ -138,13 +186,14 @@ class AcousticModel(nn.Module):
         self.fc2 = fclayer(in_features=256, out_features=128)
         self.fc3 = fclayer(in_features=128, out_features=vocab_size)
         self.rnn = LSTM(in_features=128, out_features=128, num_layers=2)
+        self.lookahead = Lookahead(n_features=128, context=20)
 
     def forward(self, x):
         conv1 = self.conv1(x)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
         conv4 = self.conv4(conv3)
-        print(conv4.shape)
+        # print(conv4.shape)
         # conv5 = self.conv5(conv4)
         # shape : (batch_size, channels, windows, dimension) => (batch size, windows, channels, dimension)
         # remember that when you transpose your tensor it only changes your stride which means you should
@@ -164,6 +213,9 @@ class AcousticModel(nn.Module):
 
         out = self.fc1(out)
         out = F.relu(out)
+        print("out:",out.shape)
+        out = self.lookahead(out)
+        print("out:", out.shape)
         out, (h_n, c_n) = self.rnn(out)
         # print(out.shape)
         # out = self.dropout(out)

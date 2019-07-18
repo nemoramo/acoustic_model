@@ -122,8 +122,8 @@ if __name__ == '__main__':
     model = model.cuda()
     print(model)
 
-    criterion = nn.CTCLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr * hvd.size()/2)
+    criterion = nn.CTCLoss() # consider other criterion?
+    optimizer = optim.Adam(model.parameters(), lr=args.lr * hvd.size()/2) # why lr * hvd.size()/2
 
     hvd.broadcast_parameters(model.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(optimizer, root_rank=0)
@@ -192,6 +192,11 @@ if __name__ == '__main__':
 
         if (epoch+1) % args.save_step == 0:
             logger.info("Saving model parameters into %s" % model_path)
+            """
+                Caution:
+                    model.cuda() will be uncampitable with horovo
+
+            """
             torch.save(model.cpu(), model_path)
 
 

@@ -78,11 +78,12 @@ class SpeechData(Dataset):
         transcripts = self.transcripts[index]
         labels = self.encoding[index]
 
-        wavsignal, fs = read_wav_data(wavfile)
+        wavsignal, fs = read_wav_data(wavfile) # fs = 16000
+        # generate features here
         features = GetFrequencyFeature3(wavsignal, fs)
-        features = features.reshape(features.shape[0], features.shape[1], 1)
+        features = features.reshape(features.shape[0], features.shape[1], 1) # 增加一维
 
-        input_length = len(features)//8+1
+        input_length = len(features)//8+1 # fs/length_of_dataline default 200
         label_length = len(labels)
         X[0:len(features)] = features
         y[0:len(labels)] = labels
