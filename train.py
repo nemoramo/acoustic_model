@@ -10,6 +10,8 @@ from torchsummary import summary
 import torchsnooper
 import horovod.torch as hvd
 from tensorboardX import SummaryWriter as writer
+import random
+from BeamSearch import ctcBeamSearch
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -79,16 +81,17 @@ parser.add_argument('--dev_step',
                     default=5)
 args = parser.parse_args()
 
-logger.info("Args are as : %s" % args)
-
-
 if __name__ == '__main__':
     # initialize horovod
     hvd.init()
     # writer = writer()
     from torch.utils.data import DataLoader
     import torch.optim as optim
+    import numpy as np
+    import keras.backend as K
     torch.cuda.set_device(hvd.local_rank())
+    if torch.cuda.current_device() == 0:
+        logger.info("Args are as : %s" % args)
     if torch.cuda.is_available():
         assert args.gpu_rank <= torch.cuda.device_count(),\
             "Should ensure that gpu_rank <= the number of yournvidia devices"
@@ -120,7 +123,9 @@ if __name__ == '__main__':
             os.mkdir(args.model_path)
         logger.info('No existing model in your provided path.')
     model = model.cuda()
-    print(model)
+
+    if torch.cuda.current_device() == 0:
+        print(model)
 
     criterion = nn.CTCLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr * hvd.size()/2)
@@ -134,7 +139,8 @@ if __name__ == '__main__':
             model.eval()
             model.cuda()
             eval_loss = 0.0
-            logger.info("Starting evaluating!")
+            if torch.cuda.current_device() == 0:
+                logger.info("Starting evaluating!")
             for batch_idx, samples in enumerate(dev_loader):
                 # optimizer.zero_grad()
                 X, y, input_lengths, label_lengths, transcripts = samples
@@ -157,7 +163,7 @@ if __name__ == '__main__':
                     # print(outputs)
                     logger.info("Evaluating step %d, step loss : %.5f , total_mean_loss : %.5f"
                                 % (batch_idx + 1, loss, eval_loss / (batch_idx + 1)))
-            logger.info("mean_eval_loss: %.5f" % eval_loss/len(dev_data))
+            # logger.info("mean_eval_loss: %.5f" % eval_loss/len(dev_data))
         else:
             model.train()
             model.cuda()
@@ -184,13 +190,23 @@ if __name__ == '__main__':
 
                 loss.backward()
                 optimizer.step()
-                if (batch_idx+1) % 30 == 0:
+                if (batch_idx+1) % 10 == 0 and torch.cuda.current_device() == 0:
                     # print(outputs)
                     logger.info("Training step %d, progress %d/%d, step loss : %.5f , total_mean_loss : %.5f"
                                 % (batch_idx+1, batch_idx+1, int(len(train_data)/(args.batch_size * args.gpu_rank)),
                                     loss, epoch_loss/(batch_idx+1)))
+                    # if loss < 10:
+                    #     # select_index = random.randint(0, args.batch_size-1)
+                    #     result = outputs.detach().transpose(0, 1).cpu().numpy()
+                    #     # result = np.transpose(result, [1, 0, 2])
+                    #     # print(result.shape)
+                    #     input_length = input_lengths.cpu().numpy()
+                    #     # result = np.hstack((result[:, 1:], result[:, 0].reshape((-1, 1))))
+                    #     # classes = list(train_data.i2w.values())[1:]
+                    #     decode = K.ctc_decode(result, input_length, greedy=False)
+                    #     print(K.get_value(decode[0][0]))
 
-        if (epoch+1) % args.save_step == 0:
+        if (epoch+1) % args.save_step == 0 and torch.cuda.current_device() == 0:
             logger.info("Saving model parameters into %s" % model_path)
             torch.save(model.cpu(), model_path)
 
