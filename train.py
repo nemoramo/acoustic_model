@@ -26,6 +26,7 @@ parser.add_argument('--model_path',
                     type=str,
                     required=True,
                     help="loading or saving model")
+
 # parameters for features.py and data iterator
 parser.add_argument('--config_path',
                     type=str,
@@ -59,6 +60,9 @@ parser.add_argument('--max_seq_length',
                     default=64,
                     help='maximum of sequence length')
 # training procedures
+parser.add_argument('--model_name',
+                    type=str,
+                    default="logs_am.pt")
 parser.add_argument('--gpu_rank',
                     type=int,
                     default=4,
@@ -84,11 +88,9 @@ args = parser.parse_args()
 if __name__ == '__main__':
     # initialize horovod
     hvd.init()
-    # writer = writer()
+
     from torch.utils.data import DataLoader
     import torch.optim as optim
-    import numpy as np
-    import keras.backend as K
     torch.cuda.set_device(hvd.local_rank())
     if torch.cuda.current_device() == 0:
         logger.info("Args are as : %s" % args)
@@ -114,7 +116,7 @@ if __name__ == '__main__':
 
     model = AcousticModel(vocab_size=vocab_size, input_dimension=200)
 
-    model_path = args.model_path + '/logs_am.pt'
+    model_path = args.model_path + '/' + args.model_name
     if os.path.exists(model_path) and args.load_model:
         logger.info("Model: %s exists, loading existing model..." % model_path)
         model = torch.load(model_path)
@@ -134,6 +136,10 @@ if __name__ == '__main__':
     hvd.broadcast_optimizer_state(optimizer, root_rank=0)
     optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
 
+    if torch.cuda.current_device() == 0:
+        writer = writer()
+
+    tr_run = 0
     for epoch in tqdm(range(args.epochs)):
         if (epoch+1) % args.dev_step == 0:
             model.eval()
@@ -146,8 +152,10 @@ if __name__ == '__main__':
                 X, y, input_lengths, label_lengths, transcripts = samples
                 X = X.type(torch.FloatTensor).cuda()
                 y = y.type(torch.LongTensor).cuda()
+                input_lengths = model.convert(input_lengths)
                 label_lengths = label_lengths.cuda()
                 input_lengths = input_lengths.cuda()
+
                 with torch.no_grad():
                     outputs = model(X)
                 # print(outputs.shape, y.shape)
@@ -159,7 +167,7 @@ if __name__ == '__main__':
                 eval_loss += loss
                 # loss.backward()
                 # optimizer.step()
-                if (batch_idx + 1) % 5 == 0:
+                if (batch_idx + 1) % int(len(dev_data)/(args.gpu_rank*int(args.batch_size/2))) == 0:
                     # print(outputs)
                     logger.info("Evaluating step %d, step loss : %.5f , total_mean_loss : %.5f"
                                 % (batch_idx + 1, loss, eval_loss / (batch_idx + 1)))
@@ -171,11 +179,13 @@ if __name__ == '__main__':
             epoch_loss = 0.0
             logger.info("Running epoch %d/%d =>" % (epoch+1, args.epochs))
             for batch_idx, samples in enumerate(train_loader):
+                tr_run += 1
                 optimizer.zero_grad()
                 X, y, input_lengths, label_lengths, transcripts = samples
                 X = X.type(torch.FloatTensor).cuda()
                 # y = y.reshape((args.batch_size*64,))
                 y = y.type(torch.LongTensor).cuda()
+                input_lengths = model.convert(input_lengths)
                 label_lengths = label_lengths.cuda()
                 input_lengths = input_lengths.cuda()
 
@@ -186,6 +196,8 @@ if __name__ == '__main__':
                                  y,
                                  input_lengths,
                                  label_lengths)
+                if torch.cuda.current_device() == 0:
+                    writer.add_scalar('tr_loss', loss.data.item(), tr_run)
                 epoch_loss += loss
 
                 loss.backward()
@@ -210,6 +222,7 @@ if __name__ == '__main__':
             logger.info("Saving model parameters into %s" % model_path)
             torch.save(model.cpu(), model_path)
 
+    writer.close()
 
 
 
