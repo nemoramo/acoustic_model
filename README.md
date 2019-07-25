@@ -11,6 +11,65 @@ RamoSpeech是一款由[ramosmy](https://github.com/ramosmy)开源的Automated Sp
 ## 模型
 
 1. DFCNN
+
+   ```bash
+   AcousticModel(
+     (dropout): Dropout(p=0.5, inplace=False)
+     (conv1): Sequential(
+       (conv1_conv1): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+       (conv1_norm1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv1_relu1): ReLU()
+       (conv1_dropout1): Dropout(p=0.1, inplace=False)
+       (conv1_conv2): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv1_norm2): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv1_relu2): ReLU()
+       (conv1_maxpool): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+       (conv1_dropout2): Dropout(p=0.1, inplace=False)
+     )
+     (conv2): Sequential(
+       (conv2_conv1): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv2_norm1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv2_relu1): ReLU()
+       (conv2_dropout1): Dropout(p=0.1, inplace=False)
+       (conv2_conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv2_norm2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv2_relu2): ReLU()
+       (conv2_maxpool): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+       (conv2_dropout2): Dropout(p=0.1, inplace=False)
+     )
+     (conv3): Sequential(
+       (conv3_conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv3_relu1): ReLU()
+       (conv3_dropout1): Dropout(p=0.2, inplace=False)
+       (conv3_norm1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv3_conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv3_norm2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv3_relu2): ReLU()
+       (conv3_maxpool): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+       (conv3_dropout2): Dropout(p=0.2, inplace=False)
+     )
+     (conv4): Sequential(
+       (conv4_conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv4_norm1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv4_relu1): ReLU()
+       (conv4_dropout1): Dropout(p=0.2, inplace=False)
+       (conv4_conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv4_relu2): ReLU()
+       (conv4_conv3): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+       (conv4_norm2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+       (conv4_relu3): ReLU()
+       (conv4_dropout2): Dropout(p=0.2, inplace=False)
+     )
+     (fc1): Linear(in_features=3200, out_features=128, bias=True)
+     (fc2): Linear(in_features=256, out_features=128, bias=True)
+     (fc3): Linear(in_features=128, out_features=1215, bias=True)
+     (rnn): LSTM(128, 128, num_layers=4, batch_first=True, dropout=0.1, bidirectional=True)
+   )
+   ['wang3', 'luo4', 'shang4', 'yi1', 'zhang1', 'yong3', 'jia1', 'qiao2', 'tou2', 'mo3', 'ji4', 'fan4', 'dian4', 'de', 'jie2', 'zhang4', 'dan1', 'shi2', 'fen1', 'yin3', 'ren2', 'zhu4', 'mu4']
+   ['wang3', 'luo4', 'shang4', 'yi1', 'zhang1', 'yong3', 'jia1', 'qiao2', 'tou2', 'guo2', 'ji4', 'fan4', 'dian4', 'de', 'jie2', 'zhang4', 'dan1', 'shi2', 'fen1', 'yin3', 'ren2', 'zhu4', 'mu4']
+   Prediction using 1.78259s
+   ```
+
 2. Come soon...
 
 Come soon!
@@ -46,3 +105,15 @@ Come soon!
    YOUR_DATA_TYPE指数据类型，分为all, thchs, aishell(陆续会增加primewords, st-cmds)
 
    请根据你的GPU数量来决定你的GPU_RANK
+
+## 数据获取
+
+Come soon!
+
+## 解码器
+
+Come soon!
+
+## 引用他人
+
+1. [ASRT_SpeechRecognition](https://github.com/nl8590687/ASRT_SpeechRecognition)
