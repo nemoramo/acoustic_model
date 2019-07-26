@@ -2,3 +2,6 @@ scipy
 python_speech_features
 numpy
 tqdm
+horovod
+tensorboardX
+python-levenshtein

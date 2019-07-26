@@ -2,8 +2,6 @@
 
 # RamoSpeech　开源音频模型
 
-=================================================
-
 ## 简介
 
 RamoSpeech是一款由[ramosmy](https://github.com/ramosmy)开源的Automated Speech Recognition框架，本仓库中存放的是开源框架中的音频模型，该音频模型使用[Pytorch](https://github.com/pytorch/pytorch)编写，基于较早的模型DeepCNN + DeepLSTM + FC + CTC实现．
