@@ -116,16 +116,32 @@ conda create -n YOUR_NEW_ENV python=3.7
 
    请根据你的GPU数量来决定你的GPU_RANK
 
+## 运行预测代码
+
+Come soon!
+
 ## 数据获取
 
 Come soon!
 
+## Loss使用
+
+1. 语音识别中通用的loss就是[ctc_loss](ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf)，本仓库主要也采用ctc_loss来进行序列建模，所幸Pytorch1.1.0版本中有自带的ctc_loss可供使用，使用起来很方便，此处就不加其他赘述．
+
+2. Cross Entropy Loss本来就是非常好的多标签分类问题one-hot形式的流行loss，然而由于输出层的输出结果并不是和目标拼音一一对应的，而是一个多对一映射，所以普通的CrossEntropy没有多大用处，此处我们参考了CVPR2019年的一篇新文章，
+
+   [Aggregation Cross-Entropy for Sequence Recognition](https://arxiv.org/pdf/1904.08364.pdf)
+
+3. Attention机制
+
 ## 解码器
 
-1. 本仓库附有一个建议的BeamSearch解码器，参考BeamSearch.py文件．但是运行速度较慢，解码需用时25秒左右(BeamWidth=10)，不建议采用．
-2. 本仓库另提供一个由Baidu DeepSpeech2提供的解码器，参考ctcDecode.py文件，当然百度提供的是character-level的，本仓库对该文件做了部分改动，使其成为word-level的，读者可以自行参考对比．
+1. 本仓库附有一个简易的BeamSearch解码器，参考BeamSearch.py文件．但是运行速度较慢，解码需用时25秒左右(BeamWidth=10)，不建议采用．
+2. 本仓库另提供一个由Baidu DeepSpeech2提供的解码器，参考ctcDecode.py文件，当然百度提供的是character-level的，本仓库对该文件做了部分改动，使其成为word-level的，速度提升显著，大约BeamWidth=30，用时1.5s，读者可以自行参考对比．
 
 ## 引用他人
 
-1. [ASRT_SpeechRecognition](https://github.com/nl8590687/ASRT_SpeechRecognition)
+1. [ASRT_SpeechRecognition](https://github.com/nl8590687/ASRT_SpeechRecognition)　感谢AiLemon提供的开源ASR代码，在我构建基础模型的时候，有很大的参考意义．
 2. [DeepSpeech2,Baidu](https://github.com/PaddlePaddle/DeepSpeech)
+3. [Aggregation Cross-Entropy for Sequence Recognition](https://arxiv.org/pdf/1904.08364.pdf)
+
