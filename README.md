@@ -84,6 +84,18 @@ Come soon!
 2. tqdm
 3. scipy, numpy
 
+安装上述所需文件，只需要：
+
+```bash
+pip install -r requirments.txt
+```
+
+推荐使用virtuenv新开一个环境，当然也可以使用
+
+```bash
+conda create -n YOUR_NEW_ENV python=3.7
+```
+
 ## 运行训练代码
 
 1. DFCNN
@@ -110,8 +122,10 @@ Come soon!
 
 ## 解码器
 
-Come soon!
+1. 本仓库附有一个建议的BeamSearch解码器，参考BeamSearch.py文件．但是运行速度较慢，解码需用时25秒左右(BeamWidth=10)，不建议采用．
+2. 本仓库另提供一个由Baidu DeepSpeech2提供的解码器，参考ctcDecode.py文件，当然百度提供的是character-level的，本仓库对该文件做了部分改动，使其成为word-level的，读者可以自行参考对比．
 
 ## 引用他人
 
 1. [ASRT_SpeechRecognition](https://github.com/nl8590687/ASRT_SpeechRecognition)
+2. [DeepSpeech2,Baidu](https://github.com/PaddlePaddle/DeepSpeech)
