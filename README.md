@@ -66,6 +66,23 @@ RamoSpeech是一款由[ramosmy](https://github.com/ramosmy)开源的Automated Sp
    ['wang3', 'luo4', 'shang4', 'yi1', 'zhang1', 'yong3', 'jia1', 'qiao2', 'tou2', 'mo3', 'ji4', 'fan4', 'dian4', 'de', 'jie2', 'zhang4', 'dan1', 'shi2', 'fen1', 'yin3', 'ren2', 'zhu4', 'mu4']
    ['wang3', 'luo4', 'shang4', 'yi1', 'zhang1', 'yong3', 'jia1', 'qiao2', 'tou2', 'guo2', 'ji4', 'fan4', 'dian4', 'de', 'jie2', 'zhang4', 'dan1', 'shi2', 'fen1', 'yin3', 'ren2', 'zhu4', 'mu4']
    Prediction using 1.78259s
+   
+    psdz-SYS-4028GR-TR  yufeng  (e) speech  ~  RamoSpeech  sh speech2text.sh 
+   Using padding as <PAD> as 0
+   Using unknown as <UNK> as 1
+   Handling data_config/aishell_train.txt
+   120098it [00:00, 234720.48it/s]
+   Handling data_config/thchs_train.txt
+   10000it [00:00, 127377.65it/s]
+   loading test data:
+   100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 7176/7176 [00:00<00:00, 259723.57it/s]
+   Prediction using 1.63606s
+   [2019-08-01 14:41:19,653 INFO] Translating shard 0.
+   
+   SENT 1: ['shang4', 'hai3', 'zhi2', 'wu4', 'yuan2', 'you3', 'ge4', 'zhong3', 'ge4', 'yang4', 'de', 'zhi2', 'wu4']
+   PRED 1: 上 海 植 物 园 有 各 种 各 样 的 植 物
+   PRED SCORE: -0.9450
+   PRED AVG SCORE: -0.0727, PRED PPL: 1.0754
    ```
 
 2. Come soon...
