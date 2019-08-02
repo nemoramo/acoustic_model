@@ -145,9 +145,7 @@ Come soon!
 
 1. 语音识别中通用的loss就是[ctc_loss](ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf)，本仓库主要也采用ctc_loss来进行序列建模，所幸Pytorch1.1.0版本中有自带的ctc_loss可供使用，使用起来很方便，此处就不加其他赘述．
 
-2. Cross Entropy Loss本来就是非常好的多标签分类问题one-hot形式的流行loss，然而由于输出层的输出结果并不是和目标拼音一一对应的，而是一个多对一映射，所以普通的CrossEntropy没有多大用处，此处我们参考了CVPR2019年的一篇新文章，
-
-   [Aggregation Cross-Entropy for Sequence Recognition](https://arxiv.org/pdf/1904.08364.pdf)
+2. Cross Entropy Loss本来就是非常好的多标签分类问题one-hot形式的流行loss，然而由于输出层的输出结果并不是和目标拼音一一对应的，而是一个多对一映射，所以普通的CrossEntropy没有多大用处，此处我们参考了CVPR2019年的一篇新文章，[Aggregation Cross-Entropy for Sequence Recognition](https://arxiv.org/pdf/1904.08364.pdf)，在参考论文的情况下，对开放的代码进行修改适合到ASR的场景，参考ace.py(还未进入测试阶段)
 
 3. Attention机制
 
