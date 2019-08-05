@@ -9,15 +9,7 @@ import torch
 import torch.nn as nn
 
 
-class Sequence(nn.Module):
-    def __init__(self):
-        super(Sequence, self).__init__()
-
-    def result_analysis(self, iteration):
-        pass
-
-
-class ACE(Sequence):
+class ACE(nn.Module):
 
     def __init__(self, dictionary):
         super(ACE, self).__init__()
@@ -28,17 +20,19 @@ class ACE(Sequence):
         self.T_ = None
         self.vocab_size = len(self.dict)
 
-    def forward(self, x, label):
+    def forward(self, x, label, lengths):
         # input shape : (T, B, C), label shape : (B,T) while in scene text recognition (B, H, W, C) (B,HW)
         # here label is still seemed as [pnyid1, pnyid2, ... pnyid_length]
-        self.T_, self.bs, _ = x.size()  # modified to adapt into self-contained models
+        _, self.bs, _ = x.size()  # modified to adapt into self-contained models
 
+        self.T_ = lengths.view(-1, 1).float()
         x = x.transpose(0, 1).contiguous()  # input size (B, T, C)
         x = x + 1e-10
 
         self.softmax = x
         label = self.reform(label)
         self.label = label
+        x = self.put(x, lengths)
 
         # ACE Implementation (four funda
         # mental formulas)
@@ -55,7 +49,7 @@ class ACE(Sequence):
 
     def reform(self, label):
         container = torch.zeros(self.bs, self.vocab_size)
-        container = container.float()
+        container = container.float().cuda()
         # print(label)
         for batch_idx in range(self.bs):
             length = 0
@@ -63,10 +57,16 @@ class ACE(Sequence):
                 if int(l.item()) != 0:
                     container[batch_idx][int(l.item())] += 1
                     length += 1
-            container[batch_idx][0] = length
-        container[:, 0] = self.T_ - container[:, 0]
+            container[batch_idx][0] = self.T_[batch_idx].item()-length
         # print(container)
         return container
+
+    def put(self, input, lengths):
+        container = torch.ones_like(input).cuda()
+        for batch_idx in range(self.bs):
+            cut_off = lengths[batch_idx].item()
+            container[batch_idx, cut_off:, :] = 0
+        return torch.mul(input, container)
 
     # def decode_batch(self):
     #     out_best = torch.max(self.softmax, 2)[1].data.cpu().numpy()
@@ -101,12 +101,14 @@ if __name__ == "__main__":
     model = AcousticModel(dev_data.label_nums(), 200)
     model = model.cuda()
     loss = ACE(dev_data.w2i)
+    loss = loss.cuda()
     # print(len(dev_data.w2i))
     for sample in test_loader:
         X, y, input_lengths, label_lengths, transcripts = sample
         X = X.float().cuda()
         out = model(X)
-        out = torch.exp(out).cpu()
+        out = torch.exp(out)
+        y = y.cuda()
         l = loss(out, y)
         print(l)
         break
