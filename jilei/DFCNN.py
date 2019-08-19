@@ -1,6 +1,8 @@
 import math
 import torch
 import torch.nn as nn
+from collections import OrderedDict
+import numpy as np
 from torchsummary import summary
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -230,16 +232,23 @@ class AcousticModel(nn.Module):
 
 
 if __name__ == "__main__":
+    from tensorboardX import SummaryWriter
     model = AcousticModel(1000, 200)
     # print(model)
-    for para in model.named_parameters():
-        print(para[0],para[1].shape)
-    print(model(torch.randn(3, 1, 1600, 200)).shape)
+    # for para in model.named_parameters():
+    #     print(para[0],para[1].shape)
+    # print(model(torch.randn(3, 1, 1600, 200)).shape)
+
+    writer = SummaryWriter()
+    n_iter = 1
+    # for name, param in model.named_parameters():
+    #     writer.add_graph(name, param.clone().cpu().data.numpy(), n_iter)
     # if torch.cuda.is_available():
     #     model = model.cuda()
-
+    with SummaryWriter(comment = "test") as w:
+        w.add_graph(model, (1, 1600, 200))
     # summary(model, (1, 1600, 200))
-
+    w.close()
 
 
 
