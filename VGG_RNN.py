@@ -2,83 +2,7 @@ import torch
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 import torch.nn.functional as F
-
-
-def convolution(in_channels, filter_size, bias=True):
-    # if input shape = (32,32,3) means input_size = 32, in_channels = 3
-    # so suppose you have a filter_size = 10 , kernel_size = 3, padding = 1, stride = 1
-    # then your layer output_size = (32-3+2)/1+1 = 32
-    # which means you keep the shape consistent with input shape
-    # return shape (batch_size, filter_size, input_size, input_size)
-    conv = nn.Conv2d(in_channels=in_channels, out_channels=filter_size, kernel_size=(3, 3), padding=1, bias=bias)
-    nn.init.kaiming_normal_(conv.weight)
-    return conv
-
-
-def normalization(num_features):
-    # batch normalization
-    # suppose input being of shape (batch_size , channels, input_size, input_size)
-    # num_features should be channels
-    return nn.BatchNorm2d(num_features)
-
-
-def maxpooling(kernel_size):
-    return nn.MaxPool2d(kernel_size=kernel_size)
-
-
-def fclayer(in_features, out_features):
-    fc = nn.Linear(in_features, out_features)
-    nn.init.kaiming_normal_(fc.weight)
-    return fc
-
-
-def normalLSTM(in_features, out_features, num_layers=2, dropout=0.1):
-    rnn = nn.LSTM(in_features, out_features, num_layers=num_layers,
-                  dropout=dropout, bidirectional=True, batch_first=True)
-    for name, param in rnn.named_parameters():
-        if 'weight_ih' in name:
-            nn.init.kaiming_normal_(param.data)
-        elif 'weight_hh' in name:
-            nn.init.xavier_normal_(param.data)
-        else:
-            param.data.fill_(0)
-    return rnn
-
-
-class BatchRNN(nn.Module):
-    def __init__(self, in_features, out_features, windows=200, rnn_type=nn.LSTM, dropout=0.3, bidirectional=True, batch_norm=True):
-        super(BatchRNN, self).__init__()
-        self.out_features = out_features
-        self.rnn_type = rnn_type
-        self.bidirectional = bidirectional
-        self.batch_norm = batch_norm
-        self.in_features = in_features
-        self.dropout = dropout
-        self.rnn = rnn_type(input_size=in_features, hidden_size=out_features,
-                            bidirectional=bidirectional, batch_first=True)
-        self.dropout = nn.Dropout(p=dropout)
-        self.BatchNorm1d = nn.BatchNorm1d(windows)
-
-    def reset_parameters(self):
-        for name, param in self.rnn.named_parameters():
-            if 'weight_ih' in name:
-                nn.init.kaiming_normal_(param.data)
-            elif 'weight_hh' in name:
-                nn.init.xavier_normal_(param.data)
-            else:
-                param.data.fill_(0)
-
-    def forward(self, x):
-        self.reset_parameters()
-        if self.batch_norm:
-            x = self.BatchNorm1d(x)  # (batch_size, windows, features)
-        x, _ = self.rnn(x)
-        # x = self.dropout(x)
-        if self.bidirectional:
-            # sum two directions which means (B,W,H*2) => (B,W,H)
-            x = x.view(x.shape[0], x.shape[1], 2, -1).sum(2).view(x.shape[0], x.shape[1], -1)
-
-        return x
+from utils import *
 
 
 class AcousticModel(nn.Module):
@@ -89,7 +13,6 @@ class AcousticModel(nn.Module):
         super(AcousticModel, self).__init__()
         self.vocab_size = vocab_size
         self.input_dimension = input_dimension
-        self.dropout = nn.Dropout(p=0.5)
         self.num_rnn_layers = 4
 
         conv1 = nn.Sequential()
@@ -145,49 +68,36 @@ class AcousticModel(nn.Module):
         self.fc1 = fclayer(in_features=self.fc_features, out_features=128)
         self.fc2 = fclayer(in_features=256, out_features=128)
         self.fc3 = fclayer(in_features=128, out_features=vocab_size)
-        # self.fc3 = fclayer(in_features=512, out_features=vocab_size)
-        # self.StackBatchRNN = nn.Sequential()
-        # self.StackBatchRNN.add_module('BatchRNN_1', BatchRNN(in_features=128,
-        #                                                      out_features=512,
-        #                                                      windows=input_dimension))
-        # for i in range(2, 2+self.num_rnn_layers-1):
-        #     self.StackBatchRNN.add_module('BatchRNN_'+str(i), BatchRNN(in_features=512,
-        #                                                                out_features=512,
-        #                                                                windows=input_dimension))
-
-        self.rnn = normalLSTM(in_features=128, out_features=128, num_layers=4)
+        self.rnn = normalRNN(in_features=128, out_features=128, rnn_type=nn.GRU, num_layers=4)
 
     def forward(self, x):
         conv1 = self.conv1(x)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
         conv4 = self.conv4(conv3)
-
-        print(conv4.shape)
-        # conv5 = self.conv5(conv4)
         # shape : (batch_size, channels, windows, dimension) => (batch size, windows, channels, dimension)
         # remember that when you transpose your tensor it only changes your stride which means you should
         # make this tensor contiguous by adding .contiguous()
-
-        """
-            [3, 128, 200, 25] -> [3, 200, 3200]
-
-        """
         conv4 = conv4.transpose(1, 2).contiguous()
-
-        # print(conv5.shape)
-
         out = conv4.view(-1, conv4.shape[1], self.fc_features)
-        print(out.shape)
         # conv4 = self.dropout(conv4)
         # print(conv4.shape)
 
         out = self.fc1(out)
         out = F.relu(out)
         # out shape: (batch_size,200,128)
+        # out, h = self.rnn1(out)  # h shape (2,batch_size,256)
+        # out = self.rnn1_layerNorm(out)
+        # out, h = self.rnn2(out)
+        # out = self.rnn2_layerNorm(out)
+        # out, h = self.rnn3(out)
+        # out = self.rnn3_layerNorm(out)
+        # print(out.shape)
+        # out = self.dropout(out)
         out, _ = self.rnn(out)
-        # out shape: (batch_size,200,256)
         out = self.fc2(out)
+        # out = F.relu(out)
+        # print(out.shape)
         out = self.fc3(out)
         out = F.log_softmax(out, dim=-1)
         out = out.transpose(0, 1).contiguous()  # (input_length, batch_size, number_classes) for ctc loss
@@ -199,16 +109,9 @@ class AcousticModel(nn.Module):
 
 if __name__ == "__main__":
     model = AcousticModel(1000, 200)
-    # print(model)
-    for para in model.named_parameters():
-        print(para[0],para[1].shape)
-    print(model(torch.randn(3, 1, 1600, 200)).shape)
+    print(model)
+    dummy_input = torch.randn(3, 1, 1600, 200)
+    print(model(dummy_input))
     # if torch.cuda.is_available():
     #     model = model.cuda()
-
     # summary(model, (1, 1600, 200))
-
-
-
-
-

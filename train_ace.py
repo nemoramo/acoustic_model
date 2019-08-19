@@ -11,8 +11,10 @@ import torchsnooper
 import horovod.torch as hvd
 from tensorboardX import SummaryWriter as writer
 import random
-from BeamSearch import ctcBeamSearch
+from ace import ACE
 
+
+__model__ = "DFCNN_ACE"
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_type',
                     type=str,
                     required=True,
-                    help='Either aishell or thchs')
+                    help='Either aishell or thchs or all')
 parser.add_argument('--model_path',
                     type=str,
                     required=True,
@@ -129,8 +131,8 @@ if __name__ == '__main__':
     if torch.cuda.current_device() == 0:
         print(model)
 
-    criterion = nn.CTCLoss() # consider other criterion?
-    optimizer = optim.Adam(model.parameters(), lr=args.lr * hvd.size()/2) # why lr * hvd.size()/2
+    criterion = ACE(train_data.w2i)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr * hvd.size()/2)
 
     hvd.broadcast_parameters(model.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(optimizer, root_rank=0)
@@ -140,6 +142,7 @@ if __name__ == '__main__':
         writer = writer()
 
     tr_run = 0
+    avg_loss = 0
     for epoch in tqdm(range(args.epochs)):
         if (epoch+1) % args.dev_step == 0:
             model.eval()
@@ -158,15 +161,15 @@ if __name__ == '__main__':
 
                 with torch.no_grad():
                     outputs = model(X)
+                    outputs = torch.exp(outputs)
                 # print(outputs.shape, y.shape)
                 # outputs = outputs.cpu()
                 loss = criterion(outputs,
-                                 y,
-                                 input_lengths,
-                                 label_lengths)
+                                 y)
                 eval_loss += loss
                 # loss.backward()
                 # optimizer.step()
+                avg_loss = eval_loss/(batch_idx+1)
                 if (batch_idx + 1) % int(len(dev_data)/(args.gpu_rank*int(args.batch_size/2))) == 0:
                     # print(outputs)
                     logger.info("Evaluating step %d, step loss : %.5f , total_mean_loss : %.5f"
@@ -190,12 +193,11 @@ if __name__ == '__main__':
                 input_lengths = input_lengths.cuda()
 
                 outputs = model(X)
+                outputs = torch.exp(outputs)
                 # print(outputs.shape, y.shape)
                 # outputs = outputs.cpu()
                 loss = criterion(outputs,
-                                 y,
-                                 input_lengths,
-                                 label_lengths)
+                                 y)
                 if torch.cuda.current_device() == 0:
                     writer.add_scalar('tr_loss', loss.data.item(), tr_run)
                 epoch_loss += loss
@@ -219,19 +221,7 @@ if __name__ == '__main__':
                     #     print(K.get_value(decode[0][0]))
 
         if (epoch+1) % args.save_step == 0 and torch.cuda.current_device() == 0:
-            logger.info("Saving model parameters into %s" % model_path)
-            """
-                Caution:
-                    model.cuda() will be uncampitable with horovo
-
-            """
-            torch.save(model.cpu(), model_path)
+            logger.info("Saving model parameters into %s" % args.model_path)
+            torch.save(model.cpu(), args.model_path + '/%s_epoch%d_loss%.5f.pt' % (__model__, epoch+1, avg_loss))
 
     writer.close()
-
-
-
-
-
-
-

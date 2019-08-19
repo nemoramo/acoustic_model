@@ -5,6 +5,7 @@ from collections import defaultdict
 from tqdm import tqdm
 import random
 from torch.utils.data import Dataset
+from prepare import WordDict
 
 
 class SpeechData(Dataset):
@@ -13,7 +14,7 @@ class SpeechData(Dataset):
         __getitem__
         __len__
     """
-    def __init__(self, path, type='train', dataset='thchs', audio_length=1600):
+    def __init__(self, path, WordDict=WordDict, type='train', dataset='thchs', audio_length=1600):
         super(SpeechData, self).__init__()
         self.data_path = path
         self.type = type
@@ -22,10 +23,9 @@ class SpeechData(Dataset):
         self.wavs = []
         self.transcripts = []
         self.encoding = []
-        self.w2i = defaultdict(lambda: len(self.w2i))
-        self.i2w = defaultdict()
-        self.pad = self.w2i['<PAD>']
-        print("Using padding as <PAD> as %d" % self.w2i['<PAD>'])
+        self.WordDict = WordDict(['data_config/aishell_train.txt', 'data_config/thchs_train.txt'])
+        self.WordDict.compose()
+        self.w2i, self.i2w = self.WordDict.get_dict()
         self.load_status = 0
         self.data_num = self.__len__()
 
@@ -58,9 +58,6 @@ class SpeechData(Dataset):
         for trn in tqdm(self.transcripts):
             encoding = [self.w2i[word] for word in trn.split(' ')]
             self.encoding.append(encoding)
-        self.i2w = {v: k for k, v in self.w2i.items()}
-        self.w2i = defaultdict(lambda: self.pad, self.w2i)
-        self.i2w = defaultdict(lambda: '<PAD>', self.i2w)
         self.load_status = 1
 
     def words2ids(self, trn):
@@ -83,7 +80,11 @@ class SpeechData(Dataset):
         features = GetFrequencyFeature3(wavsignal, fs)
         features = features.reshape(features.shape[0], features.shape[1], 1) # 增加一维
 
+
         input_length = len(features)//8+1 # fs/length_of_dataline default 200
+
+        # remember that input length is not converted, should use model.convert(input_lengths) method
+
         label_length = len(labels)
         X[0:len(features)] = features
         y[0:len(labels)] = labels
@@ -93,13 +94,15 @@ class SpeechData(Dataset):
 
 if __name__ == "__main__":
     data = SpeechData('data_config')
-    print(len(data))
+    # print(list(data.i2w.values()))
+    # print(len(data))
+    print(data.label_nums())
     from torch.utils.data import DataLoader
     loader = DataLoader(data, batch_size=4, shuffle=True)
     for batch_idx, sample in enumerate(loader):
-        pass
+        # pass
         # print(batch_idx)
-        # X, y, input_lengths, label_lengths, transcripts, index = sample
+        X, y, input_lengths, label_lengths, transcripts = sample
         # # print(X.shape)
         # y = y.reshape((256,))
         # y = y[y!=0]
@@ -108,3 +111,6 @@ if __name__ == "__main__":
         # print(transcripts[1])
         # print(input_lengths.shape)
         # print(label_lengths.shape)
+        # print(y)
+        print(input_lengths)
+        break
